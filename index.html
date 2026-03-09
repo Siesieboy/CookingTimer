@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+
+  <!-- Favicons - Plak dit in de <head> van je HTML -->
+
+  <!-- Standard favicons -->
+  <link rel="icon" type="image/png" sizes="16x16" href="https://i.ibb.co/wZhBT2Fj/favicon-16x16-png.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="https://i.ibb.co/F44L4S2Z/favicon-32x32-png.png">
+  <link rel="icon" type="image/png" sizes="48x48" href="https://i.ibb.co/nsqhnLb7/favicon-48x48-png.png">
+
+  <!-- Apple Touch Icon (iOS) -->
+  <link rel="apple-touch-icon" sizes="180x180" href="https://i.ibb.co/4Rq7VYTx/apple-touch-icon-png.png">
+
+  <!-- Android Chrome -->
+  <link rel="icon" type="image/png" sizes="192x192" href="https://i.ibb.co/VcLJ1jCJ/android-chrome-192x192-png.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="https://i.ibb.co/n80pVyBR/android-chrome-512x512-png.png">
+
+  <!-- Standaard fallback -->
+  <link rel="shortcut icon" href="https://i.ibb.co/F44L4S2Z/favicon-32x32-png.png">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kook Timers</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="container">
+    <h1>Kook Timers</h1>
+    <p class="subtitle">Zet meerdere timers tegelijk en geef ze duidelijke namen.</p>
+
+    <form id="timer-form" class="timer-form">
+      <label>
+        Naam
+        <input id="timer-name" type="text" placeholder="Bijv. Pasta" required maxlength="40">
+      </label>
+
+      <label>
+        Minuten
+        <input id="timer-minutes" type="number" min="0" max="999" value="0" required>
+      </label>
+
+      <label>
+        Seconden
+        <input id="timer-seconds" type="number" min="0" max="59" value="00" required>
+      </label>
+
+      <label>
+        Geluid
+        <select id="timer-sound">
+          <option value="bell">Bel</option>
+          <option value="ping">Ping</option>
+        </select>
+      </label>
+
+      <button type="submit">Timer toevoegen</button>
+    </form>
+
+    <section>
+      <h2>Actieve timers</h2>
+      <div id="timers" class="timers"></div>
+      <p id="empty-state" class="empty-state">Nog geen timers toegevoegd.</p>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
