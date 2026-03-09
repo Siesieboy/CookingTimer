@@ -5,9 +5,9 @@ const secondsInput = document.getElementById('timer-seconds');
 const soundInput = document.getElementById('timer-sound');
 const timersContainer = document.getElementById('timers');
 const emptyState = document.getElementById('empty-state');
-const BELL_SAMPLE_URL = 'assets/sounds/kitchen-timer.mp3';
+const BELL_SAMPLE_URL = resolveAssetUrl('assets/sounds/kitchen-timer.mp3');
 const BELL_SAMPLE_SLICE_SECONDS = 1.35;
-const PING_SAMPLE_URL = 'assets/sounds/oven-timer.mp3';
+const PING_SAMPLE_URL = resolveAssetUrl('assets/sounds/oven-timer.mp3');
 const PING_SAMPLE_SLICE_SECONDS = 1.2;
 const PING_SAMPLE_START_SECONDS = 1.2;
 
@@ -23,6 +23,10 @@ const SOUND_PROFILES = {
 let timers = [];
 let nextId = 1;
 const samplePlayers = {};
+let soundPrimed = false;
+
+window.addEventListener('pointerdown', primeSoundPlayback, { once: true });
+window.addEventListener('keydown', primeSoundPlayback, { once: true });
 
 soundInput.addEventListener('change', () => {
   playSoundTheme(soundInput.value);
@@ -210,6 +214,35 @@ function playSoundTheme(sound) {
       sustainRatio: profile.sustainRatio,
     });
   });
+}
+
+function resolveAssetUrl(path) {
+  return new URL(path, document.baseURI).toString();
+}
+
+function primeSoundPlayback() {
+  if (soundPrimed) return;
+  soundPrimed = true;
+  primeSamplePlayer('bell', BELL_SAMPLE_URL);
+  primeSamplePlayer('ping', PING_SAMPLE_URL);
+}
+
+function primeSamplePlayer(key, url) {
+  if (samplePlayers[key]) return;
+  const audio = new Audio(url);
+  audio.preload = 'auto';
+  audio.muted = true;
+  samplePlayers[key] = { audio, stopTimeoutId: null };
+
+  audio.play()
+    .then(() => {
+      audio.pause();
+      audio.currentTime = 0;
+      audio.muted = false;
+    })
+    .catch(() => {
+      audio.muted = false;
+    });
 }
 
 function playNote(context, options) {
