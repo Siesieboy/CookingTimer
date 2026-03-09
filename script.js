@@ -5,6 +5,7 @@ const secondsInput = document.getElementById('timer-seconds');
 const soundInput = document.getElementById('timer-sound');
 const timersContainer = document.getElementById('timers');
 const emptyState = document.getElementById('empty-state');
+const SCRIPT_BASE_URL = new URL('.', document.currentScript?.src || window.location.href);
 const BELL_SAMPLE_URL = resolveAssetUrl('kitchen-timer.mp3');
 const BELL_SAMPLE_SLICE_SECONDS = 1.35;
 const PING_SAMPLE_URL = resolveAssetUrl('oven-timer.mp3');
@@ -218,7 +219,7 @@ function playSoundTheme(sound) {
 }
 
 function resolveAssetUrl(path) {
-  return new URL(path, document.baseURI).toString();
+  return new URL(path, SCRIPT_BASE_URL).toString();
 }
 
 function primeSoundPlayback() {
