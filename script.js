@@ -5,9 +5,9 @@ const secondsInput = document.getElementById('timer-seconds');
 const soundInput = document.getElementById('timer-sound');
 const timersContainer = document.getElementById('timers');
 const emptyState = document.getElementById('empty-state');
-const BELL_SAMPLE_URL = resolveAssetUrl('assets/sounds/kitchen-timer.mp3');
+const BELL_SAMPLE_URL = resolveAssetUrl('kitchen-timer.mp3');
 const BELL_SAMPLE_SLICE_SECONDS = 1.35;
-const PING_SAMPLE_URL = resolveAssetUrl('assets/sounds/oven-timer.mp3');
+const PING_SAMPLE_URL = resolveAssetUrl('oven-timer.mp3');
 const PING_SAMPLE_SLICE_SECONDS = 1.2;
 const PING_SAMPLE_START_SECONDS = 1.2;
 
@@ -22,7 +22,8 @@ const SOUND_PROFILES = {
 
 let timers = [];
 let nextId = 1;
-const samplePlayers = {};
+const sampleBuffers = {};
+let sharedAudioContext = null;
 let soundPrimed = false;
 
 window.addEventListener('pointerdown', primeSoundPlayback, { once: true });
@@ -223,26 +224,37 @@ function resolveAssetUrl(path) {
 function primeSoundPlayback() {
   if (soundPrimed) return;
   soundPrimed = true;
-  primeSamplePlayer('bell', BELL_SAMPLE_URL);
-  primeSamplePlayer('ping', PING_SAMPLE_URL);
+  const context = getAudioContext();
+  if (context) {
+    context.resume();
+  }
+  loadSampleBuffer('bell', BELL_SAMPLE_URL).catch(() => {});
+  loadSampleBuffer('ping', PING_SAMPLE_URL).catch(() => {});
 }
 
-function primeSamplePlayer(key, url) {
-  if (samplePlayers[key]) return;
-  const audio = new Audio(url);
-  audio.preload = 'auto';
-  audio.muted = true;
-  samplePlayers[key] = { audio, stopTimeoutId: null };
+function getAudioContext() {
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextClass) return null;
+  if (!sharedAudioContext) {
+    sharedAudioContext = new AudioContextClass();
+  }
+  return sharedAudioContext;
+}
 
-  audio.play()
-    .then(() => {
-      audio.pause();
-      audio.currentTime = 0;
-      audio.muted = false;
-    })
-    .catch(() => {
-      audio.muted = false;
-    });
+async function loadSampleBuffer(key, url) {
+  if (sampleBuffers[key]) return sampleBuffers[key];
+  const context = getAudioContext();
+  if (!context) return null;
+
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Kan audio niet laden: ${url}`);
+  }
+
+  const arrayBuffer = await response.arrayBuffer();
+  const buffer = await context.decodeAudioData(arrayBuffer.slice(0));
+  sampleBuffers[key] = buffer;
+  return buffer;
 }
 
 function playNote(context, options) {
@@ -325,68 +337,56 @@ function playSynthPingFallback() {
 }
 
 function playSampleSlice(key, url, sliceSeconds, onFallback) {
-  if (!samplePlayers[key]) {
-    const audio = new Audio(url);
-    audio.preload = 'auto';
-    samplePlayers[key] = { audio, stopTimeoutId: null };
+  const context = getAudioContext();
+  if (!context) {
+    onFallback();
+    return;
   }
 
-  const player = samplePlayers[key];
-  const { audio } = player;
+  context.resume();
+  loadSampleBuffer(key, url)
+    .then((buffer) => {
+      if (!buffer) {
+        onFallback();
+        return;
+      }
 
-  const playSlice = () => {
-    const start = Math.max((audio.duration || 0) - sliceSeconds, 0);
-    audio.currentTime = start;
-    audio.play().catch(() => {
+      const startOffset = Math.max(buffer.duration - sliceSeconds, 0);
+      const duration = Math.min(sliceSeconds, buffer.duration);
+      const source = context.createBufferSource();
+      source.buffer = buffer;
+      source.connect(context.destination);
+      source.start(0, startOffset, duration);
+    })
+    .catch(() => {
       onFallback();
     });
-
-    if (player.stopTimeoutId) {
-      clearTimeout(player.stopTimeoutId);
-    }
-    player.stopTimeoutId = setTimeout(() => {
-      audio.pause();
-    }, sliceSeconds * 1000);
-  };
-
-  if (audio.readyState >= 1) {
-    playSlice();
-  } else {
-    audio.addEventListener('loadedmetadata', playSlice, { once: true });
-    audio.load();
-  }
 }
 
 function playSampleSliceFromStart(key, url, sliceSeconds, startSeconds, onFallback) {
-  if (!samplePlayers[key]) {
-    const audio = new Audio(url);
-    audio.preload = 'auto';
-    samplePlayers[key] = { audio, stopTimeoutId: null };
+  const context = getAudioContext();
+  if (!context) {
+    onFallback();
+    return;
   }
 
-  const player = samplePlayers[key];
-  const { audio } = player;
+  context.resume();
+  loadSampleBuffer(key, url)
+    .then((buffer) => {
+      if (!buffer || startSeconds >= buffer.duration) {
+        onFallback();
+        return;
+      }
 
-  const playSlice = () => {
-    audio.currentTime = startSeconds;
-    audio.play().catch(() => {
+      const duration = Math.min(sliceSeconds, buffer.duration - startSeconds);
+      const source = context.createBufferSource();
+      source.buffer = buffer;
+      source.connect(context.destination);
+      source.start(0, startSeconds, duration);
+    })
+    .catch(() => {
       onFallback();
     });
-
-    if (player.stopTimeoutId) {
-      clearTimeout(player.stopTimeoutId);
-    }
-    player.stopTimeoutId = setTimeout(() => {
-      audio.pause();
-    }, sliceSeconds * 1000);
-  };
-
-  if (audio.readyState >= 1) {
-    playSlice();
-  } else {
-    audio.addEventListener('loadedmetadata', playSlice, { once: true });
-    audio.load();
-  }
 }
 
 function soundLabel(sound) {
